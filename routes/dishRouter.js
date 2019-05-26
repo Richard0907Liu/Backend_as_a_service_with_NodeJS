@@ -1,68 +1,93 @@
+// connect to Express Server
 const express = require('express');
 const bodyParser = require('body-parser');
+const mongoose = require('mongoose');
+
+const Dishes = require('../models/dishes');
+/**update my dish router to be able to interact with 
+ * the MongoDB server using Mongoose */
+
+ // finally go to postmand and then perform certain operation
 
 const dishRouter = express.Router();
 
 dishRouter.use(bodyParser.json());
 
-/**And then on the dishRouter, it supports a method called route method, 
- * which can take in an endpoint as a parameter. 
- *  dishRouter.route means that by using this approach, we are declaring the endpoint 
- * at one single location, Whereby you can chain all get, PUT, POST, delete methods 
- * already do this dish router.*/
-dishRouter.route('/') 
-/** simply chain that into the route, so I will simply say .all and then 
- * I no longer need this end point definition there */
-.all((req, res, next) => { // not need app
-    
-    // use '/plain' just for test, later we will send the data in form of JSON once 
-    // we are able to retrieve tha data from the database
-    // call the next(). It continue on to look for additionall specification down 
-    // below here which match /dishes endpoint
-    /** Below three lines would be done for all the requests, get, put, post, and delete,
-     *  on the dishes, and it'll continue on to the next one*/
-    res.statsuCode = 200;
-    res.setHeader('Contect-Type', 'text/plain'); 
-    next();    // Use next(), that would drop into informtaiton to next app.post process etc.
-})
+/** from my Express server, I am accessing my MongoDB */
+dishRouter.route('/')  
 .get((req, res, next) => {
-    res.end('Will send all the dishes to you!');
+    Dishes.find({})  // send to the mongodb server using a mongoose methed
+    .then((dishes) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json'); // use json 
+        /**res.json() take as an input in json string and then send it back over to my client 
+         * when you call res.json and supply the value and then it will simply take 
+         * the parameter that you give here and then send it back as a json response*/
+        res.json(dishes); 
+    }, (err) => next(err))
+    .catch((err) => next(err));
 })
-/**I will extract the information from the bodyParser, And so here when we use the body parser, what happens is that for the incoming request, 
- * the body of the incoming request will be parsed and then added into the req object as req.body. 
- * So the req.body will give you access to whatever is inside that body of the message.*/
 .post((req, res, next) => {
-    res.end('Will add the dish: ' + req.body.name + // price property, image property and all of that in a JSON file
-             ' with details: ' + req.body.description);
+    /**Just take the request body and then parse it in as a parameter to my dishes.create
+     *  method and handle the return value */
+    Dishes.create(req.body)
+    .then((dish) => {
+        console.log('Dish Created', dish);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(dish);
+    }, (err) => next(err))
+    .catch((err) => next(err));
 })
 .put((req, res, next) => {
     res.statusCode = 403; // 403 means their operation not supported
     res.end('PUT operation not supported on /dishes');
 })
- // Later on, we will learn how to use authentication
-.delete((req, res, next) => {
-    res.end('Deleting all the dishes!');
+.delete((req, res, next) => { // Later on, we will learn how to use authentication
+    Dishes.remove({})
+    .then((resp) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(resp);
+    }, (err) => next(err))
+    .catch((err) => next(err));
 });
+
 //////
 // For route of /:dishId
 dishRouter.route('/:dishId')
 .get( (req,res,next) => {
-    res.end('Will send details of the dish: ' + req.params.dishId +' to you!');
+    Dishes.findById(req.params.dishId)
+    .then((dish) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(dish);
+    }, (err) => next(err))
+    .catch((err) => next(err));
 })
 .post((req, res, next) => {
   res.statusCode = 403;
   res.end('POST operation not supported on /dishes/'+ req.params.dishId);
 })
 .put((req, res, next) => {
-  res.write('Updating the dish: ' + req.params.dishId + '\n');
-  res.end('Will update the dish: ' + req.body.name + 
-        ' with details: ' + req.body.description);
+    Dishes.findByIdAndUpdate(req.params.dishId, {
+        $set: req.body
+    }, {new: true})
+    .then((dish) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(dish);
+    }, (err) => next(err))
+    .catch((err) => next(err));
 })
 .delete( (req, res, next) => {
-    res.end('Deleting dish: ' + req.params.dishId);
+    Dishes.findByIdAndRemove(req.params.dishId)
+    .then((resp) => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(resp);
+    }, (err) => next(err))
+    .catch((err) => next(err));
 });
-
-
-
 
 module.exports = dishRouter;
