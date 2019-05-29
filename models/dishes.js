@@ -6,7 +6,6 @@ const Schema = mongoose.Schema;
 require('mongoose-currency').loadType(mongoose); 
 const Currency = mongoose.Types.Currency; // used in the price 
 
-
 const commentSchema = new Schema({
     rating:{
         type: Number,
@@ -55,7 +54,7 @@ const dishSchema = new Schema({
     },
     featured:{
         type: Boolean,
-        defualt: false  // if my document is missing here, then the defual value will be added into the doc.
+        defaut: false  // if my document is missing here, then the defual value will be added into the doc.
     },
     comments: [commentSchema] // an array of the type commentSchema
 },{
