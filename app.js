@@ -1,7 +1,7 @@
 var createError = require('http-errors');
 var express = require('express');  // to connect the Express Server
 var path = require('path');
-var cookieParser = require('cookie-parser');
+var cookieParser = require('cookie-parser'); // can use cookie
 /**Morgan doing this work for you, it is printing out, 
  * tracing this information */
 var logger = require('morgan'); 
@@ -33,59 +33,66 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+/** The String just a key that can be used by our cookie-parser in order to encrypt the information 
+ * and sign the cookie that is sent from the server to the client */
+app.use(cookieParser('12345-67890-09876-54321')); // signed cookie
+
 // Add an authentication badge ///
 /**adding a function called auth, which I am going to implement right now 
  *  what we are specifying is the default, the client can access any of these, 
  * either their static resources in the public folder, or any of the resources, 
  * dishes, promotions, or leaders, or even users as we will see later on */
 function auth(req, res, next) { // request, response and next objects
-  console.log(req.headers); // once add the authorization header, we can see it here
+  console.log(req.signedCookies); // send signed cookies
+  // if the incoming request does not include the user field in the signed cookies, including username or password
+  if(!req.signedCookies.user){ // If the cookie.user doesn't exist
+    var authHeader = req.headers.authorization;
 
-  var authHeader = req.headers.authorization;
+    if(!authHeader){ // if the authorization is null
+      var err = new Error('You are not authenticated!');
 
-  if(!authHeader){ // if the authorization is null
-    var err = new Error('You are not authenticated!');
+      res.setHeader('WWW-Authenticate', 'Basic');
+      err.status = 401; // 401 means you are unauthorized access.
+      return next(err);
+    }
 
-    res.setHeader('WWW-Authenticate', 'Basic');
-    err.status = 401; // 401 means you are unauthorized access.
-    return next(err);
+    var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+
+    var username = auth[0];
+    var password = auth[1];
+
+    // If req.signedCookies.use doesn't exist, and then expect the user to authenticate
+    // by using the basic authentication.
+    /** if the basic authentication is successful, then I will set up the cookie here and 
+     * set up the cookie field in the outgoing response message here and this will prompt 
+     * the client to set up */
+    if(username === 'admin' && password === 'password') {
+      //"signed: true." So which means that my cookie-parser will ensure that this cookie will be signed and setup.
+      // this will include this particular name (user) into the signed cookie with this particular value (admin).
+      res.cookie('user', 'admin', {signed: true}); //that is why abobe use 'req.signedCookies.user'
+
+      /** The next()  means that from the auth their request will passed on the next set of 
+       * middleware here and then Express will try to match the specific request to 
+       * were specific middleware which will service that request*/ 
+      next();
+    }
+    else{
+      var err = new Error('You are not authenticated!');
+      res.setHeader('WWW-Authenticate', 'Basic');
+      err.status = 401; // 401 means you are unauthorized access.
+      return next(err);
+    }
   }
-  
-  // authorization header exists
-  /** Going to extract the authorization header. 
-   Since the authHeader is a string, I'm going to split that value and 
-   this authorization header. 
-   The buffer enables you to split the value and then we also give the encoding of 
-   the buffer which is Base64 encoding here
-   So we will convert that to a buffer by splitting that into two parts, using the 
-   space as the splitting part 
-   it will split that into an array, the second element of the array[1] is where 
-   this base64 encoded string exist. So we could, we are picking up the base64 encoded string 
-   from that.
-   And then again, split the string one more time because the string itself will contain the 
-   username and password separated by a colon
-   So notice that I am loading two splits here, one on the space and the second one, using 
-   the colon which separates the username and password.*/
-   var auth = new Buffer(authHeader.split(' ')[1], 'base64').toString().split(':');
-
-   var username = auth[0];
-   var password = auth[1];
-
-   // use defualt the username and password, later on will allow users to create 
-   //their own username and password
-   if(username === 'admin' && password === 'password') {
-    /** The next()  means that from the auth their request will passed on the next set of 
-     * middleware here and then Express will try to match the specific request to 
-     * were specific middleware which will service that request*/ 
-    next();
-   }
-   else{
-    var err = new Error('You are not authenticated!');
-    res.setHeader('WWW-Authenticate', 'Basic');
-    err.status = 401; // 401 means you are unauthorized access.
-    return next(err);
-   }
+  else{  // cookie.user exists, so that means that the signed cooki already exists and  the user property di defined on that
+    if(req.signedCookies.user === 'admin') {
+      next(); // So which means that you will allow the request to pass through.
+    } 
+    else{ // This cookie is not valid because it doesn't contain this correct value
+      var err = new Error('You are not authenticated!');
+      err.status = 401; // 401 means you are unauthorized access.
+      return next(err);
+    }
+  }
 }
 
 
