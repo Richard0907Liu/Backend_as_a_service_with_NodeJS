@@ -5,6 +5,9 @@ var cookieParser = require('cookie-parser'); // can use cookie
 /**Morgan doing this work for you, it is printing out, 
  * tracing this information */
 var logger = require('morgan'); 
+var session = require('express-session');
+// This takes the session as its parameters. This session referring to 'cookie-parser' that we've just imported on here
+var FileStore = require('session-file-store')(session); 
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -35,7 +38,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 /** The String just a key that can be used by our cookie-parser in order to encrypt the information 
  * and sign the cookie that is sent from the server to the client */
-app.use(cookieParser('12345-67890-09876-54321')); // signed cookie
+//app.use(cookieParser('12345-67890-09876-54321')); // signed cookie
+
+app.use(session({
+  name: 'session-id',
+  secret: '12345-67890-09876-54321',
+  saveUninitialized: false,
+  resave: false,
+  store: new FileStore()
+}));
 
 // Add an authentication badge ///
 /**adding a function called auth, which I am going to implement right now 
@@ -43,9 +54,9 @@ app.use(cookieParser('12345-67890-09876-54321')); // signed cookie
  * either their static resources in the public folder, or any of the resources, 
  * dishes, promotions, or leaders, or even users as we will see later on */
 function auth(req, res, next) { // request, response and next objects
-  console.log(req.signedCookies); // send signed cookies
+  console.log(req.session); // send signed cookies
   // if the incoming request does not include the user field in the signed cookies, including username or password
-  if(!req.signedCookies.user){ // If the cookie.user doesn't exist
+  if(!req.session.user){ // If the session.user doesn't exist
     var authHeader = req.headers.authorization;
 
     if(!authHeader){ // if the authorization is null
@@ -67,10 +78,7 @@ function auth(req, res, next) { // request, response and next objects
      * set up the cookie field in the outgoing response message here and this will prompt 
      * the client to set up */
     if(username === 'admin' && password === 'password') {
-      //"signed: true." So which means that my cookie-parser will ensure that this cookie will be signed and setup.
-      // this will include this particular name (user) into the signed cookie with this particular value (admin).
-      res.cookie('user', 'admin', {signed: true}); //that is why abobe use 'req.signedCookies.user'
-
+      req.session.user = 'admin';
       /** The next()  means that from the auth their request will passed on the next set of 
        * middleware here and then Express will try to match the specific request to 
        * were specific middleware which will service that request*/ 
@@ -84,7 +92,7 @@ function auth(req, res, next) { // request, response and next objects
     }
   }
   else{  // cookie.user exists, so that means that the signed cooki already exists and  the user property di defined on that
-    if(req.signedCookies.user === 'admin') {
+    if(req.session.user === 'admin') {
       next(); // So which means that you will allow the request to pass through.
     } 
     else{ // This cookie is not valid because it doesn't contain this correct value
