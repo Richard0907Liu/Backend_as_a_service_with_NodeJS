@@ -48,6 +48,9 @@ app.use(session({
   store: new FileStore()
 }));
 
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
+
 // Add an authentication badge ///
 /**adding a function called auth, which I am going to implement right now 
  *  what we are specifying is the default, the client can access any of these, 
@@ -57,49 +60,20 @@ function auth(req, res, next) { // request, response and next objects
   console.log(req.session); // send signed cookies
   // if the incoming request does not include the user field in the signed cookies, including username or password
   if(!req.session.user){ // If the session.user doesn't exist
-    var authHeader = req.headers.authorization;
-
-    if(!authHeader){ // if the authorization is null
       var err = new Error('You are not authenticated!');
 
-      res.setHeader('WWW-Authenticate', 'Basic');
-      err.status = 401; // 401 means you are unauthorized access.
+      err.status = 403; // 401 means you are unauthorized access.
       return next(err);
-    }
-
-    var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-
-    var username = auth[0];
-    var password = auth[1];
-
-    // If req.signedCookies.use doesn't exist, and then expect the user to authenticate
-    // by using the basic authentication.
-    /** if the basic authentication is successful, then I will set up the cookie here and 
-     * set up the cookie field in the outgoing response message here and this will prompt 
-     * the client to set up */
-    if(username === 'admin' && password === 'password') {
-      req.session.user = 'admin';
-      /** The next()  means that from the auth their request will passed on the next set of 
-       * middleware here and then Express will try to match the specific request to 
-       * were specific middleware which will service that request*/ 
-      next();
-    }
-    else{
-      var err = new Error('You are not authenticated!');
-      res.setHeader('WWW-Authenticate', 'Basic');
-      err.status = 401; // 401 means you are unauthorized access.
-      return next(err);
-    }
   }
   else{  // cookie.user exists, so that means that the signed cooki already exists and  the user property di defined on that
-    if(req.session.user === 'admin') {
+    if(req.session.user === 'authenticated') {
       next(); // So which means that you will allow the request to pass through.
     } 
     else{ // This cookie is not valid because it doesn't contain this correct value
       var err = new Error('You are not authenticated!');
-      err.status = 401; // 401 means you are unauthorized access.
+      err.status = 403; // 403 // forbidden operation, 401 means you are unauthorized access.
       return next(err);
-    }
+    } 
   }
 }
 
@@ -109,8 +83,7 @@ app.use(auth) // auth will take in three parameters
 //from the public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+// move app.use('/') and app.use('/users') up before the authentication step 
 app.use('/dishes', dishRouter);
 app.use('/promotions', promoRouter);
 app.use('/leaders', leaderRouter);
