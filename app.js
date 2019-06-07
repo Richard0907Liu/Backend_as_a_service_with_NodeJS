@@ -8,6 +8,8 @@ var logger = require('morgan');
 var session = require('express-session');
 // This takes the session as its parameters. This session referring to 'cookie-parser' that we've just imported on here
 var FileStore = require('session-file-store')(session); 
+var passport = require('passport');
+var authenticate = require('./authenticate');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -48,6 +50,12 @@ app.use(session({
   store: new FileStore()
 }));
 
+// About passport
+/** So, passport.authenitcate('local') add "req.user" and then, the passport session that we have done here will 
+ * automatically serialize that user information and then store it in the session. */
+app.use(passport.initialize());
+app.use(passport.session());
+////
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
@@ -57,23 +65,16 @@ app.use('/users', usersRouter);
  * either their static resources in the public folder, or any of the resources, 
  * dishes, promotions, or leaders, or even users as we will see later on */
 function auth(req, res, next) { // request, response and next objects
-  console.log(req.session); // send signed cookies
-  // if the incoming request does not include the user field in the signed cookies, including username or password
-  if(!req.session.user){ // If the session.user doesn't exist
-      var err = new Error('You are not authenticated!');
+  console.log(req.user);
 
-      err.status = 403; // 401 means you are unauthorized access.
-      return next(err);
-  }
-  else{  // cookie.user exists, so that means that the signed cooki already exists and  the user property di defined on that
-    if(req.session.user === 'authenticated') {
-      next(); // So which means that you will allow the request to pass through.
-    } 
-    else{ // This cookie is not valid because it doesn't contain this correct value
+  // if the incoming request does not include the user field in the signed cookies, including username or password
+  if(!req.user){ // If the session.user doesn't exist
       var err = new Error('You are not authenticated!');
-      err.status = 403; // 403 // forbidden operation, 401 means you are unauthorized access.
-      return next(err);
-    } 
+      err.status = 403; // 401 means you are unauthorized access.
+      next(err);
+  }
+  else{ 
+      next(); // So which means that you will allow the request to pass through.
   }
 }
 

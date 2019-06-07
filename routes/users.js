@@ -1,6 +1,7 @@
 var express = require('express');
 const bodyParser = require('body-parser');
 var User = require('../models/user');
+var passport = require('passport');
 
 var router = express.Router();
 router.use(bodyParser.json());
@@ -18,83 +19,35 @@ router.get('/', function(req, res, next) {
  * specify this endpoint as slash users slash signup (/user/signup), and this is 
  * the end point that will be used to sign up new users within the system*/
 router.post('/signup', function(req, res, next){
-  /**First check to make sure that the user with that username doesn't exist within the system
-   * If the user already exists, then obviously you won't allow the new user to sign up with the same username */
-  User.findOne({username: req.body.username})  // User from ./module/user.js
-  .then((user) => { 
-    /** if the user that is returned by this search is not null then that means that 
-     * the user with that given username already exists, so you should not allow 
-     * a duplicate signup. */
-    if(user != null) { // username already exists
-      var err = new Error('User ' + req.body.username + ' already exists!');
-      err.status = 403; // forbidden operation
-      next(err) ;
+  // The mongoose plugin provides us with a method called register, on the user schema and model.
+  User.register(new User({username: req.body.username}), 
+    req.body.password, (err, user)  => {
+    if(err) { // username already exists
+      res.stateCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.json({err: err});
     }
     else {
-      return User.create({
-        username: req.body.username,
-        password: req.body.password})
+      //  going to use passport to authenticate the user again. To ensure that the user registration was successful.
+      passport.authenticate('local')(req, res, () => {
+        res.stateCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        //if you want, we can load the user into this reply message here as a property in the json
+        res.json({success: true, status: 'Registration Successful!'});
+      });
     }
-  })
-  .then((user) => {
-    res.stateCode = 200;
-    res.setHeader('Content-Type', 'application/json');
-    //if you want, we can load the user into this reply message here as a property in the json
-    res.json({status: 'Registration Successful', user: user});
-  }, (err) => next(err))
-  .catch((err) => next(err));
+  });
 });
 
 /** So, to logging a user will say "router.post" on the end point/login. 
  * Now, we will still use the Express sessions that we have done earlier to track the user.
 */
-router.post('/login', (req, res, next) => {
-  // If the session.user doesn't exist, that means you have to check the ueser login information
-  if(!req.session.user){ 
-    var authHeader = req.headers.authorization;
-
-    if(!authHeader){ // if the authHeader is null
-      var err = new Error('You are not authenticated!');
-
-      res.setHeader('WWW-Authenticate', 'Basic');
-      err.status = 401; // 401 means you are unauthorized access.
-      return next(err);
-    }
-
-   
-    var auth = new Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-
-    var username = auth[0];
-    var password = auth[1];
-
-     /** But now, what we're going to do is we're going to search in the database to see 
-     * if that particular user exists */
-    User.findOne({username: username})
-    .then((user) => {  // The object from findOne() passes dwon to the parameter 'user'
-      if(user === null) { // if user = null, couldn't find the user 
-        var err = new Error('User ' + username + ' does not exist!');
-        err.status = 403;
-        return next(err);
-      }
-      else if (user.password !== password){
-        var err = new Error('Your password is incorrect!');
-        err.status = 403; // forbidden operation
-        return next(err);
-      }
-      else if(user.username === username && user.password === password) {
-        req.session.user = 'authenticated';  // used in req.session.user in app.js
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'text/plain');
-        res.end('You are authenticated! '+ user.username );
-      }
-    })
-    .catch((err) => next(err));
-  }
-  else{ //If that is already set, then that means that the user is already logged in.
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('You are already authenticated!');
-  }
+// So when the router post comes in on the login endpoint, we will first call 
+// the passport authenticate local.
+router.post('/login', passport.authenticate('local'), (req, res) => {
+  res.stateCode = 200;
+  res.setHeader('Content-Type', 'application/json');
+  res.json({success: true, status: 'You are Successfully logged in'});
 });
 
 /** The last method that we will implement is for logging out the user. 
