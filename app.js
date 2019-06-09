@@ -10,6 +10,7 @@ var session = require('express-session');
 var FileStore = require('session-file-store')(session); 
 var passport = require('passport');
 var authenticate = require('./authenticate');
+var config = require('./config');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -22,7 +23,7 @@ const mongoose = require('mongoose');
 
 const Dishes = require('./models/dishes');
 
-const url = 'mongodb://localhost:27017/conFusion';
+const url = config.mongoUrl;
 const connect = mongoose.connect(url,  { useNewUrlParser: true });
 connect.then((db) => {
   console.log('Connected correctly to server');
@@ -42,6 +43,7 @@ app.use(express.urlencoded({ extended: false }));
  * and sign the cookie that is sent from the server to the client */
 //app.use(cookieParser('12345-67890-09876-54321')); // signed cookie
 
+/** use token-base authenticate, not use session authenticate
 app.use(session({
   name: 'session-id',
   secret: '12345-67890-09876-54321',
@@ -49,37 +51,18 @@ app.use(session({
   resave: false,
   store: new FileStore()
 }));
+*/
 
 // About passport
 /** So, passport.authenitcate('local') add "req.user" and then, the passport session that we have done here will 
  * automatically serialize that user information and then store it in the session. */
 app.use(passport.initialize());
-app.use(passport.session());
+// app.use(passport.session()); not use session
 ////
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
-// Add an authentication badge ///
-/**adding a function called auth, which I am going to implement right now 
- *  what we are specifying is the default, the client can access any of these, 
- * either their static resources in the public folder, or any of the resources, 
- * dishes, promotions, or leaders, or even users as we will see later on */
-function auth(req, res, next) { // request, response and next objects
-  console.log(req.user);
 
-  // if the incoming request does not include the user field in the signed cookies, including username or password
-  if(!req.user){ // If the session.user doesn't exist
-      var err = new Error('You are not authenticated!');
-      err.status = 403; // 401 means you are unauthorized access.
-      next(err);
-  }
-  else{ 
-      next(); // So which means that you will allow the request to pass through.
-  }
-}
-
-
-app.use(auth) // auth will take in three parameters
 //this call here app.use(express.static) is what enables us to serve static data 
 //from the public folder
 app.use(express.static(path.join(__dirname, 'public')));
