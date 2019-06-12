@@ -13,6 +13,14 @@ var User = new Schema({
 /** we can remove the username and password because these would be automatically 
  * added in by the passport-local-mongoose plugin here and to use that as a plugin 
  * in our mongoose schema and model. */
+    firstname: {
+        type: String,
+        default: ''
+    },
+    lastname: {
+        type: String,
+        default: ''
+    },
     admin: {
         type: Boolean,
         default: false

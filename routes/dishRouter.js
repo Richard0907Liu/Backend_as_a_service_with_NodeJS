@@ -18,6 +18,7 @@ dishRouter.use(bodyParser.json());
 dishRouter.route('/')  
 .get((req, res, next) => {
     Dishes.find({})  // send to the mongodb server using a mongoose methed
+    .populate('comments.author')
     .then((dishes) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json'); // use json 
@@ -63,6 +64,7 @@ dishRouter.route('/')
 dishRouter.route('/:dishId')
 .get( (req,res,next) => {
     Dishes.findById(req.params.dishId)
+    .populate('comments.author')
     .then((dish) => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -100,6 +102,7 @@ dishRouter.route('/:dishId')
 dishRouter.route('/:dishId/comments')  
 .get((req, res, next) => {
     Dishes.findById(req.params.dishId)  // send to the mongodb server using a mongoose methed
+    .populate('comments.author')
     .then((dish) => {
         if(dish != null){
             res.statusCode = 200;
@@ -114,17 +117,22 @@ dishRouter.route('/:dishId/comments')
     }, (err) => next(err))
     .catch((err) => next(err));
 })
-.post(authenticate.verifyUser, (req, res, next) => {
+.post(authenticate.verifyUser, (req, res, next) => { // update comments
     Dishes.findById(req.params.dishId)
     .then((dish) => {
         if(dish != null){
+            req.body.author = req.user._id; // save _id to author and save
             // Before pass back the value
             dish.comments.push(req.body);
             dish.save() // save the collection 
             .then((dish) => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json(dish);  // returning the updated dish back to the user here.
+                Dishes.findById(dish._id) // find a certain dish and populate comments.author
+                .populate('comments.author')
+                .then((dish) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(dish);  // returning the updated dish back to the user here.
+                });
             }, (err) => next(err));
         }
         else{ // dish not exist
@@ -170,6 +178,7 @@ dishRouter.route('/:dishId/comments')
 dishRouter.route('/:dishId/comments/:commentId')
 .get( (req,res,next) => {
     Dishes.findById(req.params.dishId)
+    .populate('comments.author')
     .then((dish) => {
         if(dish != null && dish.comments.id(req.params.commentId) != null){
             res.statusCode = 200;
@@ -210,9 +219,13 @@ dishRouter.route('/:dishId/comments/:commentId')
             }
             dish.save() // save the collection 
             .then((dish) => {
-                res.statusCode = 200;  // res for sending back the reply
+                Dishes.findById(dish._id)
+                .populate('comments.author')
+                .then((dish) => {
+                    res.statusCode = 200;  // res for sending back the reply
                 res.setHeader('Content-Type', 'application/json');
                 res.json(dish);  // returning the updated dish back to the user here.
+                })
             }, (err) => next(err));
         }
         else if (dish == null){ // dish doesn't exist, cannot update comments
@@ -236,9 +249,13 @@ dishRouter.route('/:dishId/comments/:commentId')
             dish.comments.id(req.params.commentId).remove();           
             dish.save() // save the collection 
             .then((dish) => {
-                res.statusCode = 200;
-                res.setHeader('Content-Type', 'application/json');
-                res.json(dish);  // returning the updated dish back to the user here.
+                Dishes.findById(dish._id)
+                .populate('comments.author')
+                .then((dish) => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(dish);  // returning the updated dish back to the user here.
+                })
             }, (err) => next(err));
         }
         else if (dish == null){ // dish doesn't exist, cannot update comments
