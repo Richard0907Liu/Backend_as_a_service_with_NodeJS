@@ -5,37 +5,24 @@ const mongoose = require('mongoose');
 const authenticate = require('../authenticate');
 
 const Dishes = require('../models/dishes');
-/**update my dish router to be able to interact with 
- * the MongoDB server using Mongoose */
-
- // finally go to postmand and then perform certain operation
 
 const dishRouter = express.Router();
 
 dishRouter.use(bodyParser.json());
 
-/** from my Express server, I am accessing my MongoDB */
+
 dishRouter.route('/')  
 .get((req, res, next) => {
-    Dishes.find({})  // send to the mongodb server using a mongoose methed
+    Dishes.find({})  
     .populate('comments.author')
     .then((dishes) => {
         res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json'); // use json 
-        /**res.json() take as an input in json string and then send it back over to my client 
-         * when you call res.json and supply the value and then it will simply take 
-         * the parameter that you give here and then send it back as a json response*/
+        res.setHeader('Content-Type', 'application/json'); 
         res.json(dishes); 
     }, (err) => next(err))
     .catch((err) => next(err));
 })
-/** First execute this middleware (authenticate.verifyUser), which I have exported 
- * from the authentic.js file, I first apply that, which is equivalent to saying passport 
- * authenticate JWT and you are checking the user. If this is sucessful, then I will move on
- * to do the rest of it */
-.post(authenticate.verifyUser, (req, res, next) => {
-    /**Just take the request body and then parse it in as a parameter to my dishes.create
-     *  method and handle the return value */
+.post(authenticate.verifyUser, authenticate.verifyAdmin,(req, res, next) => {
     Dishes.create(req.body)
     .then((dish) => {
         console.log('Dish Created', dish);
@@ -45,11 +32,11 @@ dishRouter.route('/')
     }, (err) => next(err))
     .catch((err) => next(err));
 })
-.put(authenticate.verifyUser,(req, res, next) => {
-    res.statusCode = 403; // 403 means their  operation not supported
+.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    res.statusCode = 403; 
     res.end('PUT operation not supported on /dishes');
 })
-.delete(authenticate.verifyUser, (req, res, next) => { // Later on, we will learn how to use authentication
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => { 
     Dishes.remove({})
     .then((resp) => {
         res.statusCode = 200;
@@ -72,11 +59,11 @@ dishRouter.route('/:dishId')
     }, (err) => next(err))
     .catch((err) => next(err));
 })
-.post(authenticate.verifyUser,(req, res, next) => {
+.post(authenticate.verifyUser,authenticate.verifyAdmin, (req, res, next) => {
   res.statusCode = 403;
   res.end('POST operation not supported on /dishes/'+ req.params.dishId);
 })
-.put(authenticate.verifyUser,(req, res, next) => {
+.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.findByIdAndUpdate(req.params.dishId, {
         $set: req.body
     }, {new: true})
@@ -87,7 +74,7 @@ dishRouter.route('/:dishId')
     }, (err) => next(err))
     .catch((err) => next(err));
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Dishes.findByIdAndRemove(req.params.dishId)
     .then((resp) => {
         res.statusCode = 200;
@@ -148,14 +135,12 @@ dishRouter.route('/:dishId/comments')
     res.end('PUT operation not supported on /dishes'
         + req.params.dishId + '/comments');
 })
-.delete(authenticate.verifyUser,(req, res, next) => { // Later on, we will learn how to use authentication
+.delete(authenticate.verifyUser,authenticate.verifyAdmin, (req, res, next) => { // Later on, we will learn how to use authentication
     Dishes.findById(req.params.dishId)
     .then((dish) => { // resp, Server response
         if(dish != null){
-            /** have to go in and delete each of the comments */
+           
             for(var i = (dish.comments.length -1); i >=0; i--){ 
-                /** inside here (dish.comments[i]._id) you will specify the id of the subdocuments 
-                that you're trying to access*/
                 dish.comments.id(dish.comments[i]._id).remove();
             }
             dish.save() // save the collection 
@@ -207,10 +192,7 @@ dishRouter.route('/:dishId/comments/:commentId')
     Dishes.findById(req.params.dishId)
     .then((dish) => {
         if(dish != null && dish.comments.id(req.params.commentId) != null){
-            // can update comments
-            /**if a comment already exists then I don't want to allow the user to change 
-             * the author of the comment, the author should retained. The only two fields 
-             * that I would allow the user update is the rating and the comment*/
+
             if(req.body.rating){
                 dish.comments.id(req.params.commentId).rating = req.body.rating;
             }
@@ -242,10 +224,17 @@ dishRouter.route('/:dishId/comments/:commentId')
     .catch((err) => next(err));
 })
 .delete(authenticate.verifyUser, (req, res, next) => {
+    //console.log("Show reqest id: ", req.user._id);  // for test, can show this line.
+    //console.log("Show comment id: ", req.params.commentId); // for test
+
     Dishes.findById(req.params.dishId)
     .then((dish) => { // resp, Server response
-        if(dish != null && dish.comments.id(req.params.commentId) != null){
-            /** have to go in and delete a specific comments */
+        
+        var authorId = dish.comments.id(req.params.commentId).author; //._id;
+        console.log("Author ID: ", authorId); // for test
+
+        if(dish != null && dish.comments.id(req.params.commentId) != null 
+                && dish.comments.id(req.params.commentId).author.equals(req.user._id)){
             dish.comments.id(req.params.commentId).remove();           
             dish.save() // save the collection 
             .then((dish) => {
@@ -263,9 +252,14 @@ dishRouter.route('/:dishId/comments/:commentId')
             err.status = 404;
             return next(err); // we're just going to return that error here from the get operation
          }
-        else{ // commentID doesn't exist, cannot update comments
-            err = new Error('Comment' + req.params.commentId + ' not found');
-            err.status = 404;
+        //else if (dish.commnets.id(req.param.commentId) == null){ // commentID doesn't exist, cannot update comments
+         //   err = new Error('Comment' + req.params.commentId + ' not found');
+         //   err.status = 404;
+         //   return next(err);
+        //}
+        else{
+            err = new Error('you are not authorized to delete this commnet ');
+            err.status = 403;
             return next(err);
         }
     }, (err) => next(err))
