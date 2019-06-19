@@ -32,6 +32,20 @@ connect.then((db) => {
 
 var app = express();
 
+/*This is port 3000 (http), it'll redirect that request to the secure port , let me 
+set up a middleware right after we declare the app.express. */
+app.all('*', (req, res, next) => {
+  if(req.secure){ // the request  is already a secure req, the secure flag is true
+    return next(); // just go to next step
+  }
+  else{ // regular http
+    //Redirecting to the same server.  http://localhost:3000/dishes => 3443
+    // status code ad 307, here represents that the target resource resides temporarily under different URL
+    res.redirect(307, 'https://' + req.hostname + ':' + app.get('secPort') + req.url);
+  }
+}); // all() means all request no matter what the path in the request is.
+
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');

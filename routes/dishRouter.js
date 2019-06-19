@@ -224,7 +224,7 @@ dishRouter.route('/:dishId/comments/:commentId')
     .catch((err) => next(err));
 })
 .delete(authenticate.verifyUser, (req, res, next) => {
-    //console.log("Show reqest id: ", req.user._id);  // for test, can show this line.
+    //console.log("Show reqest id: ", req.user._id);  // for test
     //console.log("Show comment id: ", req.params.commentId); // for test
 
     Dishes.findById(req.params.dishId)
