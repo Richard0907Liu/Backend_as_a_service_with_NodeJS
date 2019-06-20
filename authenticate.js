@@ -1,3 +1,4 @@
+// In postman, use "Bearer" not bearer in the Authenticate's value
 
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy; 

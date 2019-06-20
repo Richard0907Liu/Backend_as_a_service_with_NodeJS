@@ -1,8 +1,11 @@
 // connect to Express Server
+// Can upload files to the server from the client side
+// The file gets uploaded to a specified folder on the server side
 const express = require('express');
 const bodyParser = require('body-parser');
 const authenticate = require('../authenticate');
 const multer = require('multer'); // can upload files
+const cors = require('./cors');
 
 // this disk storage function which enables us to define the storage engine 
 // and in here we can configure a few things.
@@ -54,7 +57,8 @@ uploadRouter.use(bodyParser.json());
 
 
 uploadRouter.route('/')
-.get(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => {res.sendStatus(200); }) // preflighting request
+.get(cors.cors, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403; 
     res.end('GET operation not supported on /imageUpload');
 })
@@ -62,8 +66,9 @@ uploadRouter.route('/')
 /**That single file will specify in the upload form from the client side in the multi-part form 
  * upload by using that name there. 
  * upload contain a lot of function*/
-.post(authenticate.verifyUser, authenticate.verifyAdmin, 
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, 
     upload.single('imageFile'),(req, res) => {  // imageFile for key
+    console.log('Request headers',req.headers, '\n', 'Request file', req.file);
     // The name of the form field  in single() which specifies that file.
     // Upload single means that it is going to allow me to upload only a single file here
     res.statusCode = 200;
@@ -74,11 +79,11 @@ uploadRouter.route('/')
      * can be used by the client to configure any place where it needs to know the 
      * location of this image file.*/
 })
-.put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403; 
     res.end('PUT operation not supported on /imageUpload');
 })
-.delete(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403; 
     res.end('DELETE operation not supported on /imageUpload');
 })

@@ -35,6 +35,7 @@ connect.then((db) => {
 
 var app = express();
 
+// Secure traffic only
 /*This is port 3000 (http), it'll redirect that request to the secure port , let me 
 set up a middleware right after we declare the app.express. */
 app.all('*', (req, res, next) => {
