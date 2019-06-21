@@ -57,17 +57,30 @@ router.post('/login', cors.corsWithOptions, passport.authenticate('local'), (req
   res.json({success: true, token: token, status: 'You are Successfully logged in'});
 });
 
-router.get('/logout', (req, res) => {
+router.get('/logout', cors.corsWithOptions, (req, res) => {
   if(req.session) {
     req.session.destroy();
-    res.clearCookie('session-id');
-    
+    res.clearCookie('session-id'); 
     res.redirect('/');
   }
   else{ 
     var err = new Error('You are not logged in!');
     err.status = 403 
     next(err);
+  }
+});
+
+// Now, we're going to be using Facebook for logging in the user.
+router.get('/facebook/token', passport.authenticate('facebook-token'), (req, res) => {
+  /** So, at this point, we would say, if (req.user), now notice that when we call passport.authenticate with 
+   * the facebook-token strategy. This, if passport.authenticate() is successful, it would have loaded in the user into the request object. */
+  if(req.user){
+    /** So essentially, the user is sending the access token to the express server, the express server uses the accessToken to go to Facebook 
+     * and then fetch the profile of the user. And if the user doesn't exist, we'll create a new user with that Facebook ID.*/
+    var token = authenticate.getToken({_id: req.user._id});
+    res.stateCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.json({success: true, token: token, status: 'You are Successfully logged in by Facebook account!'});
   }
 });
 

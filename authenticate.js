@@ -6,6 +6,7 @@ var User = require('./models/user');
 var JwtStrategy = require('passport-jwt').Strategy;
 var ExtractJwt = require('passport-jwt').ExtractJwt;
 var jwt = require('jsonwebtoken'); // used to create, sign and verify tokens
+var FacebookTokenStrategy = require('passport-facebook-token');
 
 var config = require('./config.js');
 
@@ -59,3 +60,39 @@ exports.verifyAdmin = (req, res, next) =>{
     }, (err) => next(err))
     .catch((err) => next(err));
 };
+
+
+/**So which means that if the user has already logged in earlier using the Facebook approach, then the user 
+ * would have already been created. And so, that user will be found and then we just pass back that user.*/
+exports.FacebookPassport = passport.use(new FacebookTokenStrategy(
+    { clientID: config.facebook.clientId,
+        clientSecret: config.facebook.clientSecret
+    },
+    // callback function
+    (accessToken, refreshToken, profile, done) => {
+        /**where do we obtain the facebookId? Notice that we're getting that profile for the user, 
+         * coming in here, so you can see that this profile is coming in as a parameter. */
+        User.findOne({facebookId: profile.id}, (err, user) => { 
+            if(err){
+                return done(err, false);  // done function from 'passport'
+            }
+            if(!err && user != null){  // If users had logged in a facebook account before.
+                console.log('Facebook user: ', uer);
+                return done(null, user);
+            }
+            else{  // if users never logg in a facebook a facebook account before, we need to create a new user.
+                console.log('Profile: ', profile);
+                user = new User({username: profile.displayName});
+                user.facebookId = profile.id; // This is returned from the user's Facebook profile
+                user.firstname = profile.name.givenName;
+                user.lastname = profile.name.familyName;
+                user.save((err, user) => {
+                    if(err)
+                        return done(err, false);
+                    else
+                        return done(null, user);
+                });
+            }
+        });
+    }    
+));

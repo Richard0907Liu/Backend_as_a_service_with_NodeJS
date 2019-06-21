@@ -21,6 +21,12 @@ var User = new Schema({
         type: String,
         default: ''
     },
+    /**When a user passes in the access token, then you're going to be fetching the 
+     * profile and then setting up an account for that user in our local server here, 
+     * in our express server here. 
+     * Of course this particular account will not have a password or rather the hash 
+     * installed associated with this (it don't have a password from facebook).*/
+    facebookId: String,
     admin: {
         type: Boolean,
         default: false
