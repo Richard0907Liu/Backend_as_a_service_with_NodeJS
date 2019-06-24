@@ -19,7 +19,7 @@ const commentSchema = new Schema({
     },
     author:{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: 'User'  // connect to User schema
     }
 },{
     timestamps:true
@@ -61,7 +61,7 @@ const dishSchema = new Schema({
     timestamps:true
 });
 
-// Dish is the collection name
+// Dish is the collection name, model name
 var Dishes = mongoose.model('Dish', dishSchema);
 
 module.exports = Dishes;

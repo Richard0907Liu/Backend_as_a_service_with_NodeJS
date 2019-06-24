@@ -211,8 +211,8 @@ dishRouter.route('/:dishId/comments/:commentId')
                 .populate('comments.author')
                 .then((dish) => {
                     res.statusCode = 200;  // res for sending back the reply
-                res.setHeader('Content-Type', 'application/json');
-                res.json(dish);  // returning the updated dish back to the user here.
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(dish);  // returning the updated dish back to the user here.
                 })
             }, (err) => next(err));
         }
