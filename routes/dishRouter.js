@@ -12,8 +12,6 @@ dishRouter.use(bodyParser.json());
 
 
 dishRouter.route('/')  
-/**Whenever you need to "preflight" your requests, the client will first send the HTTP OPTIONS request message 
- * and then obtain the reply from the server side before it actually sends the actual request. */
 .options(cors.corsWithOptions, (req, res) => { res.sendStatus(200); })
 .get(cors.cors, (req, res, next) => {
     Dishes.find({})  
