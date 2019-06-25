@@ -62,16 +62,13 @@ exports.verifyAdmin = (req, res, next) =>{
 };
 
 
-/**So which means that if the user has already logged in earlier using the Facebook approach, then the user 
- * would have already been created. And so, that user will be found and then we just pass back that user.*/
 exports.FacebookPassport = passport.use(new FacebookTokenStrategy(
     { clientID: config.facebook.clientId,
         clientSecret: config.facebook.clientSecret
     },
     // callback function
     (accessToken, refreshToken, profile, done) => {
-        /**where do we obtain the facebookId? Notice that we're getting that profile for the user, 
-         * coming in here, so you can see that this profile is coming in as a parameter. */
+        
         User.findOne({facebookId: profile.id}, (err, user) => { 
             if(err){
                 return done(err, false);  // done function from 'passport'
