@@ -27,9 +27,6 @@ const storage = multer.diskStorage({
     }
 }); 
 
-/** Through the callback function, I will pass information back to my multer configuration that 
- * enables me to specify how  I'm going to store this information. 
- * An error function*/
 const imageFileFilter = (req, file, cb) => {
     // match() for regular expression
     if(!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)){
@@ -46,8 +43,6 @@ const imageFileFilter = (req, file, cb) => {
 const upload = multer({storage: storage,
         fileFilter: imageFileFilter});
 
-
-
 /**The file filter will enable me to specify which kind of files I am willing to upload or that I'm willing to 
  * accept for uploading. */
 
@@ -62,10 +57,7 @@ uploadRouter.route('/')
     res.statusCode = 403; 
     res.end('GET operation not supported on /imageUpload');
 })
-// post not need next()
-/**That single file will specify in the upload form from the client side in the multi-part form 
- * upload by using that name there. 
- * upload contain a lot of function*/
+
 .post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, 
     upload.single('imageFile'),(req, res) => {  // imageFile for key
     console.log('Request headers',req.headers, '\n', 'Request file', req.file);
@@ -74,10 +66,7 @@ uploadRouter.route('/')
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.json(req.file); 
-    /** pass back this req.file object from the server back to the client
-     * This req.file object will also contain the path to the file in there and that path 
-     * can be used by the client to configure any place where it needs to know the 
-     * location of this image file.*/
+
 })
 .put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403; 
